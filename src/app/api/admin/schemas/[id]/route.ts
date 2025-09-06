@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
-import { getDatabase } from '@/lib/database';
+import { databaseManager } from '@/lib/database';
 import { schemaDefinitionSchema } from '@/lib/validation';
 
 interface RouteParams {
@@ -16,8 +16,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.id);
+    const schema = await databaseManager.getSchema(params.id);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
@@ -52,15 +51,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const db = await getDatabase();
-    const schemaIndex = db.data.schemas.findIndex(s => s.id === params.id);
-    
-    if (schemaIndex === -1) {
-      return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
-    }
-
     // Check if new name conflicts with existing schemas (excluding current one)
-    const conflictingSchema = db.data.schemas.find(s => s.name === body.name && s.id !== params.id);
+    const allSchemas = await databaseManager.getAllSchemas();
+    const conflictingSchema = allSchemas.find(s => s.name === body.name && s.id !== params.id);
     if (conflictingSchema) {
       return NextResponse.json(
         { error: 'Schema with this name already exists' },
@@ -68,16 +61,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Update schema
-    db.data.schemas[schemaIndex] = {
-      ...db.data.schemas[schemaIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      const updatedSchema = await databaseManager.updateSchema(params.id, body);
+      
+      if (!updatedSchema) {
+        return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
+      }
 
-    await db.write();
-
-    return NextResponse.json({ schema: db.data.schemas[schemaIndex] });
+      return NextResponse.json({ schema: updatedSchema });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Schema with this name already exists') {
+        return NextResponse.json(
+          { error: 'Schema with this name already exists' },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
   } catch (error) {
     console.error('Update schema error:', error);
@@ -95,18 +95,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDatabase();
-    const schemaIndex = db.data.schemas.findIndex(s => s.id === params.id);
+    const success = await databaseManager.deleteSchema(params.id);
     
-    if (schemaIndex === -1) {
+    if (!success) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
     }
-
-    // Remove schema and its data
-    db.data.schemas.splice(schemaIndex, 1);
-    delete db.data.data[params.id];
-
-    await db.write();
 
     return NextResponse.json({ message: 'Schema deleted successfully' });
 

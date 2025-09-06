@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
-import { getDatabase, getSchemaData, saveSchemaData } from '@/lib/database';
+import { databaseManager } from '@/lib/database';
 import { validateDataEntry } from '@/lib/validation';
 
 interface RouteParams {
@@ -17,14 +17,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.schemaId);
+    const schema = await databaseManager.getSchema(params.schemaId);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
     }
 
-    const data = await getSchemaData(params.schemaId);
+    const data = await databaseManager.getSchemaData(schema.name);
     const entry = data.find(item => item.id === params.id);
     
     if (!entry) {
@@ -51,8 +50,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
     
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.schemaId);
+    const schema = await databaseManager.getSchema(params.schemaId);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
@@ -67,23 +65,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const currentData = await getSchemaData(params.schemaId);
-    const entryIndex = currentData.findIndex(item => item.id === params.id);
-    
-    if (entryIndex === -1) {
-      return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
-    }
-
-    // Update entry
-    currentData[entryIndex] = {
-      ...currentData[entryIndex],
+    const entryData = {
       ...body,
       updatedAt: new Date().toISOString(),
     };
 
-    await saveSchemaData(params.schemaId, currentData);
+    const updatedEntry = await databaseManager.updateDataEntry(schema.name, params.id, entryData);
+    
+    if (!updatedEntry) {
+      return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
+    }
 
-    return NextResponse.json({ entry: currentData[entryIndex] });
+    return NextResponse.json({ entry: updatedEntry });
 
   } catch (error) {
     console.error('Update data entry error:', error);
@@ -101,23 +94,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.schemaId);
+    const schema = await databaseManager.getSchema(params.schemaId);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
     }
 
-    const currentData = await getSchemaData(params.schemaId);
-    const entryIndex = currentData.findIndex(item => item.id === params.id);
+    const success = await databaseManager.deleteDataEntry(schema.name, params.id);
     
-    if (entryIndex === -1) {
+    if (!success) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }
-
-    // Remove entry
-    currentData.splice(entryIndex, 1);
-    await saveSchemaData(params.schemaId, currentData);
 
     return NextResponse.json({ message: 'Entry deleted successfully' });
 

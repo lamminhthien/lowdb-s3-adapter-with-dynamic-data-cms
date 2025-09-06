@@ -135,7 +135,7 @@ export default function ContentOverview() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm text-gray-500">
                     <FileText className="h-4 w-4 mr-1" />
-                    Content Type: {schema.id}
+                    Internal Name: {schema.name}
                   </div>
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" asChild>

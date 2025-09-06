@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
-import { getDatabase, getSchemaData, saveSchemaData } from '@/lib/database';
+import { databaseManager } from '@/lib/database';
 import { validateDataEntry } from '@/lib/validation';
 
 interface RouteParams {
@@ -16,14 +16,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.schemaId);
+    const schema = await databaseManager.getSchema(params.schemaId);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
     }
 
-    const data = await getSchemaData(params.schemaId);
+    const data = await databaseManager.getSchemaData(schema.name);
     return NextResponse.json({ data, schema });
 
   } catch (error) {
@@ -44,8 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
     
-    const db = await getDatabase();
-    const schema = db.data.schemas.find(s => s.id === params.schemaId);
+    const schema = await databaseManager.getSchema(params.schemaId);
     
     if (!schema) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
@@ -61,16 +59,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create new entry
-    const newEntry = {
-      id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    const entryData = {
       ...body,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const currentData = await getSchemaData(params.schemaId);
-    currentData.push(newEntry);
-    await saveSchemaData(params.schemaId, currentData);
+    const newEntry = await databaseManager.addDataEntry(schema.name, entryData);
 
     return NextResponse.json({ entry: newEntry }, { status: 201 });
 
