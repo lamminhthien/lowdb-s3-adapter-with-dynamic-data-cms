@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand, S3ClientConfig } from '@aws-sdk/client-s3';
 import { Adapter } from 'lowdb';
 
 export interface S3AdapterOptions {
@@ -7,6 +7,8 @@ export interface S3AdapterOptions {
   region?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
 }
 
 export class S3Adapter<T> implements Adapter<T> {
@@ -18,13 +20,23 @@ export class S3Adapter<T> implements Adapter<T> {
     this.bucketName = options.bucketName;
     this.key = options.key;
     
-    this.s3Client = new S3Client({
+    const clientConfig = {
       region: options.region || process.env.AWS_REGION || 'us-east-1',
       credentials: {
         accessKeyId: options.accessKeyId || process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: options.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '',
       },
-    });
+      ...(options.endpoint || process.env.S3_ENDPOINT ? {
+        endpoint: options.endpoint || process.env.S3_ENDPOINT
+      } : {}),
+      ...(options.forcePathStyle !== undefined ? {
+        forcePathStyle: options.forcePathStyle
+      } : process.env.S3_FORCE_PATH_STYLE ? {
+        forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true'
+      } : {}),
+    };
+
+    this.s3Client = new S3Client(clientConfig);
   }
 
   async read(): Promise<T | null> {

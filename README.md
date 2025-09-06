@@ -27,8 +27,8 @@ A modern, flexible Content Management System built with Next.js, lowdb, and AWS 
 ### Prerequisites
 
 - Node.js 18+ 
-- AWS Account with S3 access
-- AWS S3 bucket
+- AWS Account with S3 access OR MinIO server OR other S3-compatible service
+- S3 bucket (AWS S3, MinIO, etc.)
 
 ### Installation
 
@@ -43,6 +43,8 @@ cp .env.example .env.local
 ```
 
 3. Configure your environment variables in `.env.local`:
+
+**For AWS S3:**
 ```env
 # Authentication
 ADMIN_USERNAME=admin
@@ -54,6 +56,27 @@ AWS_ACCESS_KEY_ID=your-aws-access-key-id
 AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_REGION=us-east-1
 S3_BUCKET_NAME=your-s3-bucket-name
+S3_ENDPOINT=
+S3_FORCE_PATH_STYLE=false
+
+# Application
+NEXT_PUBLIC_APP_NAME=Dynamic CMS
+```
+
+**For MinIO or other S3-compatible services:**
+```env
+# Authentication
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+JWT_SECRET=your-jwt-secret-key-should-be-very-long-and-random
+
+# MinIO/S3-Compatible Service Configuration
+AWS_ACCESS_KEY_ID=your-minio-access-key
+AWS_SECRET_ACCESS_KEY=your-minio-secret-key
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=your-bucket-name
+S3_ENDPOINT=http://localhost:9000
+S3_FORCE_PATH_STYLE=true
 
 # Application
 NEXT_PUBLIC_APP_NAME=Dynamic CMS
@@ -65,6 +88,80 @@ npm run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## S3-Compatible Services
+
+### Using MinIO
+
+MinIO is a high-performance, S3-compatible object storage server. To use MinIO:
+
+1. **Install and run MinIO:**
+```bash
+# Using Docker
+docker run -d -p 9000:9000 -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  minio/minio server /data --console-address ":9001"
+```
+
+2. **Create bucket using MinIO Client (mc):**
+
+First, install MinIO client:
+```bash
+# macOS
+brew install minio/stable/mc
+
+# Linux
+curl https://dl.min.io/client/mc/release/linux-amd64/mc \
+  --create-dirs \
+  -o $HOME/minio-binaries/mc
+chmod +x $HOME/minio-binaries/mc
+export PATH=$PATH:$HOME/minio-binaries/
+
+# Windows
+# Download from https://dl.min.io/client/mc/release/windows-amd64/mc.exe
+```
+
+Configure and create bucket:
+```bash
+# Add MinIO server alias
+mc alias set local http://localhost:9000 minioadmin minioadmin
+
+# Create bucket
+mc mb local/cms-data
+
+# Grant public read access (optional, for public file access)
+mc anonymous set download local/cms-data
+
+# Verify bucket creation
+mc ls local/
+```
+
+**Alternative: Using MinIO Console (Web UI):**
+   - Access MinIO Console at `http://localhost:9001`
+   - Login with `minioadmin` / `minioadmin`
+   - Create a new bucket named `cms-data`
+   - Set bucket policy to public read if needed
+
+3. **Configure environment variables:**
+```env
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+S3_BUCKET_NAME=cms-data
+S3_ENDPOINT=http://localhost:9000
+S3_FORCE_PATH_STYLE=true
+```
+
+### Other S3-Compatible Services
+
+The CMS works with any S3-compatible service. Common options include:
+
+- **DigitalOcean Spaces**: Set `S3_ENDPOINT=https://your-region.digitaloceanspaces.com`
+- **Wasabi**: Set `S3_ENDPOINT=https://s3.your-region.wasabisys.com`
+- **Backblaze B2**: Use their S3-compatible API endpoint
+- **Cloudflare R2**: Set `S3_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com`
+
+**Important**: Most non-AWS services require `S3_FORCE_PATH_STYLE=true`.
 
 ## Usage
 
