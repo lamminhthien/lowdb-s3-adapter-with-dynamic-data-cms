@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { LogOut, Database, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AdminLayout({
   children,
@@ -67,13 +68,15 @@ export default function AdminLayout({
             </div>
             <div className="flex items-center">
               <span className="text-gray-700 mr-4">Welcome, {user.username}</span>
-              <button
+              <Button
                 onClick={handleLogout}
-                className="bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 flex items-center"
+                variant="default"
+                size="sm"
+                className="flex items-center"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -7,6 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { schemaDefinitionSchema } from '@/lib/validation';
 import { FieldDefinition, FieldType } from '@/lib/database';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 interface SchemaFormData {
   name: string;
@@ -35,13 +44,7 @@ export default function SchemaForm({ schemaId, initialData }: SchemaFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<SchemaFormData>({
+  const form = useForm<SchemaFormData>({
     resolver: zodResolver(schemaDefinitionSchema),
     defaultValues: initialData || {
       name: '',
@@ -58,11 +61,11 @@ export default function SchemaForm({ schemaId, initialData }: SchemaFormProps) {
   });
 
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: form.control,
     name: 'fields',
   });
 
-  const watchedFields = watch('fields');
+  const watchedFields = form.watch('fields');
 
   const onSubmit = async (data: SchemaFormData) => {
     setLoading(true);
@@ -105,13 +108,14 @@ export default function SchemaForm({ schemaId, initialData }: SchemaFormProps) {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="mb-6">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => router.back()}
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" />
+          <ArrowLeft className="w-4 h-4 mr-2" />
           Back
-        </button>
+        </Button>
       </div>
 
       <div className="border-b border-gray-200 pb-5">
@@ -121,178 +125,193 @@ export default function SchemaForm({ schemaId, initialData }: SchemaFormProps) {
       </div>
 
       {error && (
-        <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mt-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6">
-        <div className="grid grid-cols-1 gap-6">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Schema Name (Internal)
-            </label>
-            <input
-              type="text"
-              {...register('name')}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="e.g., blog_posts"
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Schema Name (Internal)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., blog_posts" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
 
-          <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-              Display Name
-            </label>
-            <input
-              type="text"
-              {...register('displayName')}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="e.g., Blog Posts"
-            />
-            {errors.displayName && (
-              <p className="mt-1 text-sm text-red-600">{errors.displayName.message}</p>
+          <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Display Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Blog Posts" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
 
           <div>
             <div className="flex justify-between items-center mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Fields
-              </label>
-              <button
+              <Label className="text-sm font-medium">Fields</Label>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={addField}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 mr-2" />
                 Add Field
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <h4 className="text-sm font-medium text-gray-900">
-                      Field {index + 1}
-                    </h4>
-                    {fields.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <Card key={field.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-sm">Field {index + 1}</CardTitle>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`fields.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Field Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`fields.${index}.label`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Field Label</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., Title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`fields.${index}.type`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Field Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select field type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {fieldTypes.map((type) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`fields.${index}.required`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              Required field
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Show options field for select type */}
+                    {watchedFields[index]?.type === 'select' && (
+                      <FormField
+                        control={form.control}
+                        name={`fields.${index}.validation.options`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Options (one per line)</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Option 1&#10;Option 2&#10;Option 3"
+                                className="resize-none"
+                                {...field}
+                                value={Array.isArray(field.value) ? field.value.join('\n') : field.value || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value ? value.split('\n').filter(Boolean) : []);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Field Name
-                      </label>
-                      <input
-                        type="text"
-                        {...register(`fields.${index}.name`)}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="e.g., title"
-                      />
-                      {errors.fields?.[index]?.name && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.fields[index]?.name?.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Field Label
-                      </label>
-                      <input
-                        type="text"
-                        {...register(`fields.${index}.label`)}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="e.g., Title"
-                      />
-                      {errors.fields?.[index]?.label && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.fields[index]?.label?.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Field Type
-                      </label>
-                      <select
-                        {...register(`fields.${index}.type`)}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      >
-                        {fieldTypes.map((type) => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        {...register(`fields.${index}.required`)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                      <label className="ml-2 block text-sm text-gray-900">
-                        Required field
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Show options field for select type */}
-                  {watchedFields[index]?.type === 'select' && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Options (one per line)
-                      </label>
-                      <textarea
-                        {...register(`fields.${index}.validation.options`, {
-                          setValueAs: (value: string) => value ? value.split('\n').filter(Boolean) : [],
-                        })}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        rows={3}
-                        placeholder="Option 1&#10;Option 2&#10;Option 3"
-                      />
-                    </div>
-                  )}
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
-        </div>
 
-        <div className="mt-6 flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : schemaId ? 'Update Schema' : 'Create Schema'}
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end space-x-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : schemaId ? 'Update Schema' : 'Create Schema'}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
